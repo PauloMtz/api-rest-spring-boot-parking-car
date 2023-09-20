@@ -9,6 +9,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import com.parking.exception.CodigoUniqueViolationException;
 import com.parking.exception.CpfUniqueViolationException;
 import com.parking.exception.EntityNotFoundException;
 import com.parking.exception.PasswordInvalidException;
@@ -36,8 +37,9 @@ public class ApiExceptionHandler {
                 "Campo(s) inválido(s)", result)); // result é para validação de campos
     }
 
-    // exceção para campos duplicados no banco de dados
-    @ExceptionHandler({UsernameUniqueViolationException.class, CpfUniqueViolationException.class})
+    // exceções para campos duplicados no banco de dados
+    @ExceptionHandler({UsernameUniqueViolationException.class, 
+        CpfUniqueViolationException.class, CodigoUniqueViolationException.class})
     public ResponseEntity<ErrorMessage> uniqueViolationException(
             RuntimeException ex, HttpServletRequest request) {
         
