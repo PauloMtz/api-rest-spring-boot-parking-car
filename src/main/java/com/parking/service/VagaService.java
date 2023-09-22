@@ -11,6 +11,8 @@ import com.parking.repository.VagaRepository;
 
 import lombok.RequiredArgsConstructor;
 
+import static com.parking.entity.Vaga.StatusVaga.LIVRE;
+
 @RequiredArgsConstructor
 @Service
 public class VagaService {
@@ -32,5 +34,12 @@ public class VagaService {
         return repository.findByCodigo(codigo).orElseThrow(
             () -> new EntityNotFoundException(
                 String.format("Vaga com código '%s' não foi encontrada", codigo)));
+    }
+
+    @Transactional(readOnly = true)
+    public Vaga buscarPorVagaLivre() {
+        return repository.findFirstByStatus(LIVRE).orElseThrow(
+            () -> new EntityNotFoundException("Nenhuma vaga livre foi encontrada")
+        );
     }
 }

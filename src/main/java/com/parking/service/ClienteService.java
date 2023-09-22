@@ -54,4 +54,11 @@ public class ClienteService {
     public Page<ClienteProjection> buscarTodos(Pageable pageable) {
         return repository.findAllPageable(pageable);
     }
+
+    @Transactional(readOnly = true)
+    public Cliente buscarPorCpf(String cpf) {
+        return repository.findByCpf(cpf).orElseThrow(
+            () -> new EntityNotFoundException(String.format("Cliente com CPF '%s' não encontrado", cpf))
+        );
+    }
 }
