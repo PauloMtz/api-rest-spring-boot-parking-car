@@ -80,11 +80,29 @@ public class ApiExceptionHandler {
 
     // exceção para acesso negado por falta de permissão
     @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ErrorMessage> accessDeniedException(AccessDeniedException ex, HttpServletRequest request) {
+    public ResponseEntity<ErrorMessage> accessDeniedException(AccessDeniedException ex, 
+        HttpServletRequest request) {
+        
         log.error("Api Error - ", ex);
         return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(new ErrorMessage(request, HttpStatus.FORBIDDEN, ex.getMessage()));
+    }
+
+    // trata qualquer exceção que não estiver acima
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorMessage> internalServerErrorException(Exception ex, 
+        HttpServletRequest request) {
+        
+        ErrorMessage error = new ErrorMessage(
+            request, HttpStatus.INTERNAL_SERVER_ERROR, 
+                HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase());
+        log.error("Internal Server Error {} {} ", error, ex.getMessage());
+
+        return ResponseEntity
+            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(error);
     }
 }

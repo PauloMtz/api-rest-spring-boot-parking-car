@@ -1,5 +1,9 @@
 package com.parking.web.controller;
 
+import static io.swagger.v3.oas.annotations.enums.ParameterIn.PATH;
+import static io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY;
+
+import java.io.IOException;
 import java.net.URI;
 
 import org.springframework.data.domain.Page;
@@ -7,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -22,8 +27,10 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import com.parking.entity.ClienteVaga;
 import com.parking.jwt.JwtUserDetails;
 import com.parking.repository.projection.ClienteVagaProjection;
+import com.parking.service.ClienteService;
 import com.parking.service.ClienteVagaService;
 import com.parking.service.EstacionamentoService;
+import com.parking.service.JasperService;
 import com.parking.web.dto.EstacionamentoCreateDTO;
 import com.parking.web.dto.EstacionamentoResponseDTO;
 import com.parking.web.dto.PageableDto;
@@ -41,11 +48,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-
-import static io.swagger.v3.oas.annotations.enums.ParameterIn.PATH;
-import static io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY;
 
 @Tag(name = "Estacionamentos", 
     description = "Operações de registro de entrada e saída de um veículo do estacionamento.")
@@ -56,6 +61,8 @@ public class EstacionamentoController {
 
     private final EstacionamentoService estacionamentoService;
     private final ClienteVagaService clienteVagaService;
+    private final ClienteService clienteService;
+    private final JasperService jasperService;
     
     @Operation(summary = "Operação de check-in", 
         description = "Recurso para dar entrada de um veículo no estacionamento. " +
@@ -227,5 +234,38 @@ public class EstacionamentoController {
         PageableDto dto = PageableMapper.toPageableDto(projection);
 
         return ResponseEntity.ok(dto);
+    }
+
+    @Operation(summary = "Relatório em PDF com os estacionamentos do cliente",
+        description = "Recurso para gerar um relatório com os estacionamentos do cliente. " +
+                "Requisição exige uso de um bearer token.",
+        security = @SecurityRequirement(name = "security"),
+        responses = {
+            @ApiResponse(responseCode = "200", 
+                description = "Relatório gerado com sucesso",
+                content = @Content(mediaType = "application/pdf",
+                schema = @Schema(implementation = EstacionamentoResponseDTO.class))),
+            @ApiResponse(responseCode = "403", 
+                description = "Recurso não permito ao perfil de ADMIN",
+                content = @Content(mediaType = " application/json;charset=UTF-8",
+                schema = @Schema(implementation = ErrorMessage.class)))
+        })
+    @GetMapping("/relatorio")
+    @PreAuthorize("hasRole('CLIENTE')")
+    public ResponseEntity<Void> getRelatorio(HttpServletResponse response, 
+        @AuthenticationPrincipal JwtUserDetails user) throws IOException {
+        
+        String cpf = clienteService.buscarPorUsuarioId(user.getId()).getCpf();
+        // esse CPF é o parâmetro do relatório
+        jasperService.addParams("CPF", cpf);
+
+        byte[] bytes = jasperService.gerarPdf();
+
+        response.setContentType(MediaType.APPLICATION_PDF_VALUE);
+        response.setHeader("Content-disposition", "inline; filename=relatorio-"
+            + System.currentTimeMillis() + ".pdf");
+        response.getOutputStream().write(bytes);
+
+        return ResponseEntity.ok().build();
     }
 }
